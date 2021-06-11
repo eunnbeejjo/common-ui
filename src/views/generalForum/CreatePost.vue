@@ -1,9 +1,9 @@
 <template>
   <v-container>
-    <v-text-field placeholder="제목 입력해라"></v-text-field>
+    <v-text-field placeholder="제목 입력해라" v-model="title"></v-text-field>
     <v-row>
       <v-col>
-        <ckeditor v-model="value1" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
+        <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
       </v-col>
     </v-row>
     <v-row>
@@ -12,7 +12,7 @@
       </v-col>
       <v-col>
 <!--        게시글 작성 시 카테고리 선택할 때에는 '전체' 항목 보여주지 않음 -->
-        <v-combobox v-model="cateSelect" :items="categoriesGroup" placeholder="카테고리(최대 3개)" multiple
+        <v-combobox v-model="cateSelect" :items="cateGroup" placeholder="카테고리(최대 3개)" multiple
                     dense hide-details class="mr-2">
           <template v-slot:selection="{attrs, item, parent, selected}">
             <v-chip v-if="item === Object(item)" v-bind="attrs" :input-value="selected" small>
@@ -28,29 +28,23 @@
       <v-col><v-file-input></v-file-input></v-col>
     </v-row>
     <v-row>
-      <v-col><v-checkbox v-model="usePassword" label="비밀번호 사용" value="hasPassword"></v-checkbox></v-col>
-      <v-col><v-text-field :disabled="!usePassword" v-model="password" type="password" placeholder="비밀번호 입력" autocomplete="new-password"></v-text-field></v-col>
+      <v-col><v-checkbox v-model="pwActiveFlag" true-value="Y" false-value="N" label="비밀번호 사용" value="hasPassword"></v-checkbox></v-col>
+      <v-col><v-text-field :disabled="pwActiveFlag === 'N'" v-model="password" type="password" placeholder="비밀번호 입력" autocomplete="new-password"></v-text-field></v-col>
     </v-row>
     <v-row>
       <v-col>댓글 사용 여부</v-col>
       <v-col>
-        <v-radio-group v-model="commentAllow" row>
-          <v-radio value="allowComment" label="댓글 허용"></v-radio>
-          <v-radio value="noComment" label="댓글 허용 안함"></v-radio>
-        </v-radio-group>
+        <v-checkbox v-model="commentFlag" true-value="Y" false-value="N" label="댓글 허용"></v-checkbox>
       </v-col>
       <v-col>게시물 공개 여부</v-col>
       <v-col>
-        <v-radio-group v-model="disclosurePost" row>
-          <v-radio value="publicPost" label="공개"></v-radio>
-          <v-radio value="privatePost" label="비공개"></v-radio>
-        </v-radio-group>
+        <v-checkbox v-model="privateFlag" true-value="Y" false-value="N" label="비공개"></v-checkbox>
       </v-col>
     </v-row>
     <v-row>
       <v-col>
         <v-btn @click="$router.push('/general-forum')">취소</v-btn>
-        <v-btn @click="savePost">저장</v-btn>
+        <v-btn @click="createBoard">저장</v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -67,25 +61,35 @@ export default {
     'ckeditor': Ckeditor.component
   },
   data: () => ({
-    commentAllow: 'allowComment',
-    disclosurePost: 'publicPost',
-    usePassword: false,
-    password: null,
+    title: '',
+    contents: '',
 
-    value1: null,
+    commentFlag: "Y",
+    privateFlag: "N",
+    pwActiveFlag: "N",
+    password: '',
+
+    attachments: "N",
+
+    categoryId: [],
+    cateSelectedStr: '',
+
     editor: DecoupledEditor,
-    cateSelect: null,
-    categoriesGroup: [
-      { text: "스포츠" },
-      { text: "게임" },
-      { text: "공부" },
-      { text: "업무" },
-      { text: "카테고리이름이길수도있으니까" },
-      { text: "세상은넓고카테고리는길다" },
-      { text: "커피에얼음을퐁당퐁당" },
-      { text: "동해물과백두산이마르고닳도록하느님이보우하사" },
-    ],
+    cateSelect: [],
+    cateGroup: [{}],
   }),
+  watch: {
+    cateSelect (val) {
+      if(val.length > 3) {
+        this.$nextTick(() => this.cateSelect.pop());
+        alert('카테고리는 3개까지 추가 가능합니다!');
+      }
+      this.cateSelectedStr = this.cateSelect.map(value => value.value);
+    }
+  },
+  mounted() {
+    this.getCategoryList();
+  },
   methods: {
     onReady( editor ) {
       // Insert the toolbar before the editable area.
@@ -97,6 +101,36 @@ export default {
     savePost() {
       alert('저장되었습니다!');
       router.push('/general-forum')
+    },
+    // 카테고리 List 조회
+    getCategoryList() {
+      this.$store.dispatch("boardStore/getCategoryList", {
+      }).then(response => {
+        this.cateGroup = response.data.list;
+        this.cateGroup = this.cateGroup.map(function (obj) {
+          obj['text'] = obj['categoryName'];
+          obj['value'] = obj['categoryId'];
+          delete obj['categoryName'];
+          delete obj['categoryId'];
+          return obj;
+        })
+        this.cateGroup.splice(0, 1);
+      })
+    },
+    createBoard() {
+      this.$store.dispatch("boardStore/createBoard", {
+        userId: 1,
+        title: this.title,
+        contents: this.contents,
+        pwActiveFlag: this.pwActiveFlag,
+        password: this.password,
+        attachmentsFlag: this.attachmentsFlag,
+        privateFlag: this.privateFlag,
+        categoryId: this.cateSelectedStr,
+        commentFlag: this.commentFlag,
+      }).then(response => {
+        console.log(response, 'response');
+      }).catch()
     },
   },
 }

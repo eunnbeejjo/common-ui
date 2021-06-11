@@ -6,11 +6,11 @@
         <v-card-title class="text-h3 mb-5">게시판</v-card-title>
         <v-row>
           <v-col cols="3">
-            <v-select v-model="searchDefault" :items="search" dense hide-details style="width: 100px; float: left" class="mr-2"></v-select>
-            <v-text-field dense hide-details placeholder="검색어 입력" style="width: 200px; float: left"></v-text-field>
+            <v-select v-model="selectedSearch" :items="search" item-text="text" item-value="value" dense hide-details style="width: 100px; float: left" class="mr-2"></v-select>
+            <v-text-field dense hide-details placeholder="검색어 입력" v-model="searchWord" style="width: 200px; float: left"></v-text-field>
           </v-col>
           <v-col>
-            <v-combobox v-model="cateSelect" :items="categoriesGroup" placeholder="카테고리(최대 3개)" multiple
+            <v-combobox v-model="cateSelect" :items="cateGroup" placeholder="카테고리(최대 3개)" multiple
                         dense hide-details class="mr-2">
               <template v-slot:selection="{attrs, item, parent, selected}">
                 <v-chip v-if="item === Object(item)" v-bind="attrs" :input-value="selected" small>
@@ -21,21 +21,26 @@
             </v-combobox>
           </v-col>
           <v-col cols="1">
-            <v-btn>조회</v-btn>
+            <v-btn @click="getSearchBoardList">조회</v-btn>
           </v-col>
         </v-row>
         <v-row>
           <v-col cols="12">
-            <v-data-table :headers="headers" :items="desserts" multi-sort :sort-desc="[false, true]"
+            <v-fade-transition leave-absolute>
+              <v-skeleton-loader v-if="SKloading" type="table"></v-skeleton-loader>
+            </v-fade-transition>
+            <v-fade-transition leave-absolute>
+            <v-data-table :headers="headers" :items="boardList" multi-sort :sort-desc="[false, true]"
                           :page.sync="page" :items-per-page="itemsPerPage" @page-count="pageCount = $event"
-                          @click:row="rowHasPw">
-              <template v-slot:item.name="{item}">
-                <span>{{ item.name }}</span>
-                <v-icon v-if="item.hasFile === true" small class="ml-1">mdi-paperclip</v-icon>
-                <v-icon v-if="item.hasPw === true" small class="ml-1">mdi-lock</v-icon>
+                          @click:row="postHasPw" v-show="!SKloading" :loading="SKloading">
+              <template v-slot:item.title="{item}">
+                <span>{{ item.title }}</span>
+                <v-icon v-if="item.privateFlag === 'Y'" small class="ml-1">mdi-paperclip</v-icon>
+                <v-icon v-if="item.pwActiveFlag === 'Y'" small class="ml-1">mdi-lock</v-icon>
               </template>
             </v-data-table>
-            <v-card-actions class="justify-center px-10">
+            </v-fade-transition>
+            <v-card-actions v-show="!SKloading" class="justify-center px-10">
               <v-pagination v-model="page" :length="pageCount"/>
               <v-select :value="itemsPerPage" label="게시글 표시 갯수" :items="pageGroup" @input="itemsPerPage = parseInt($event, 10)" hide-details></v-select>
             </v-card-actions>
@@ -52,6 +57,9 @@
 </v-sheet>
 </template>
 
+<!--
+유저 아이디 있으면 (헤더바에 표시) 게시판 목록 뿌려줄 수 있음
+-->
 <script>
 import router from "../../router";
 
@@ -63,406 +71,227 @@ export default {
         this.$nextTick(() => this.cateSelect.pop());
         alert('카테고리는 3개까지 검색 가능합니다!');
       }
+      this.cateSelectedStr = this.cateSelect.map(value => value.value).join();
+      console.log(this.cateSelectedStr, 'qwerqerqerqw');
     }
+  },
+  props: {
+    loading: {type: Boolean, default: true},
   },
   data() {
     return {
+      SKloading: false,
       page: 1,
       pageCount: 0,
       itemsPerPage: 10,
       pageGroup: [5, 10, 15, 20],
-      cateSelect: [],
-      searchDefault: "전체",
-      search: ["전체", "작성자", "제목", "댓글"],
-      categoriesGroup: [
-        { text: "전체" },
-        { text: "스포츠" },
-        { text: "게임" },
-        { text: "공부" },
-        { text: "업무" },
-        { text: "카테고리이름이길수도있으니까" },
-        { text: "세상은넓고카테고리는길다" },
-        { text: "커피에얼음을퐁당퐁당" },
-        { text: "동해물과백두산이마르고닳도록하느님이보우하사" },
+      cateSelect: [{text: "전체", value: 1}],
+      cateSelectedStr: '1',
+      selectedSearch: 'all',
+      search: [
+        { text: '전체', value: 'all'},
+        { text: '작성자', value: 'writer'},
+        { text: '제목', value: 'title'},
+        { text: '내용', value: 'contents'},
       ],
-
+      searchWord: 'test',
+      cateGroup: [{}],
       headers: [
-        { text: '카테고리', align: 'start', sortable: false, value: 'categories', width: 100},
-        { text: '제목', sortable: false, value: 'name', width: 200 },
-        { text: '헤더1', value: 'calories' },
-        { text: '헤더2', value: 'fat' },
-        { text: '헤더헤더', value: 'carbs' },
-        { text: '헤에에에더', value: 'protein' },
-        { text: '헤헤헤히호호호', value: 'iron' },
+        { text: 'No.', align: 'start', value: 'boardId', width: 70 },
+        { text: '카테고리', value: 'category', width: 200 },
+        { text: '제목', value: 'title', width: 250 },
+        { text: '조회수', value: 'views' },
+        { text: '사용자 아이디', value: 'userId' },
+        { text: '수정일자', value: 'updateAt' },
       ],
-      desserts: [
-        {
-          name: 'Frozen Yogurt',
-          hasFile: true,
-          isPublic: true,
-          hasPw: true,
-          categories: ['카테고리1', '카테고리가길다면', '아길다길어'],
-          calories: 200,
-          fat: 6.0,
-          carbs: 24,
-          protein: 4.0,
-          iron: '1%',
-        },
-        {
-          name: 'Ice cream sandwich',
-          hasFile: false,
-          isPublic: true,
-          hasPw: true,
-          categories: ['A', 'B'],
-          calories: 200,
-          fat: 9.0,
-          carbs: 37,
-          protein: 4.3,
-          iron: '1%',
-        },
-        {
-          name: 'Eclair',
-          hasFile: true,
-          isPublic: false,
-          hasPw: true,
-          categories: ['B', 'C'],
-          calories: 300,
-          fat: 16.0,
-          carbs: 23,
-          protein: 6.0,
-          iron: '7%',
-        },
-        {
-          name: 'Cupcake',
-          hasFile: true,
-          isPublic: true,
-          hasPw: false,
-          categories: ['A', 'C'],
-          calories: 300,
-          fat: 3.7,
-          carbs: 67,
-          protein: 4.3,
-          iron: '8%',
-        },
-        {
-          name: 'Gingerbread',
-          calories: 400,
-          fat: 16.0,
-          carbs: 49,
-          protein: 3.9,
-          iron: '16%',
-        },
-        {
-          name: 'Jelly bean',
-          calories: 400,
-          fat: 0.0,
-          carbs: 94,
-          protein: 0.0,
-          iron: '0%',
-        },
-        {
-          name: 'Lollipop',
-          calories: 400,
-          fat: 0.2,
-          carbs: 98,
-          protein: 0,
-          iron: '2%',
-        },
-        {
-          name: 'Honeycomb',
-          calories: 400,
-          fat: 3.2,
-          carbs: 87,
-          protein: 6.5,
-          iron: '45%',
-        },
-        {
-          name: 'Donut',
-          calories: 500,
-          fat: 25.0,
-          carbs: 51,
-          protein: 4.9,
-          iron: '22%',
-        },
-        {
-          name: 'KitKat',
-          calories: 500,
-          fat: 26.0,
-          carbs: 65,
-          protein: 7,
-          iron: '6%',
-        },
-        {
-          name: 'Frozen Yogurt',
-          calories: 200,
-          fat: 6.0,
-          carbs: 24,
-          protein: 4.0,
-          iron: '1%',
-        },
-        {
-          name: 'Ice cream sandwich',
-          calories: 200,
-          fat: 9.0,
-          carbs: 37,
-          protein: 4.3,
-          iron: '1%',
-        },
-        {
-          name: 'Eclair',
-          calories: 300,
-          fat: 16.0,
-          carbs: 23,
-          protein: 6.0,
-          iron: '7%',
-        },
-        {
-          name: 'Cupcake',
-          calories: 300,
-          fat: 3.7,
-          carbs: 67,
-          protein: 4.3,
-          iron: '8%',
-        },
-        {
-          name: 'Gingerbread',
-          calories: 400,
-          fat: 16.0,
-          carbs: 49,
-          protein: 3.9,
-          iron: '16%',
-        },
-        {
-          name: 'Jelly bean',
-          calories: 400,
-          fat: 0.0,
-          carbs: 94,
-          protein: 0.0,
-          iron: '0%',
-        },
-        {
-          name: 'Lollipop',
-          calories: 400,
-          fat: 0.2,
-          carbs: 98,
-          protein: 0,
-          iron: '2%',
-        },
-        {
-          name: 'Honeycomb',
-          calories: 400,
-          fat: 3.2,
-          carbs: 87,
-          protein: 6.5,
-          iron: '45%',
-        },
-        {
-          name: 'Donut',
-          calories: 500,
-          fat: 25.0,
-          carbs: 51,
-          protein: 4.9,
-          iron: '22%',
-        },
-        {
-          name: 'KitKat',
-          calories: 500,
-          fat: 26.0,
-          carbs: 65,
-          protein: 7,
-          iron: '6%',
-        },
-        {
-          name: 'Frozen Yogurt',
-          calories: 200,
-          fat: 6.0,
-          carbs: 24,
-          protein: 4.0,
-          iron: '1%',
-        },
-        {
-          name: 'Ice cream sandwich',
-          calories: 200,
-          fat: 9.0,
-          carbs: 37,
-          protein: 4.3,
-          iron: '1%',
-        },
-        {
-          name: 'Eclair',
-          calories: 300,
-          fat: 16.0,
-          carbs: 23,
-          protein: 6.0,
-          iron: '7%',
-        },
-        {
-          name: 'Cupcake',
-          calories: 300,
-          fat: 3.7,
-          carbs: 67,
-          protein: 4.3,
-          iron: '8%',
-        },
-        {
-          name: 'Gingerbread',
-          calories: 400,
-          fat: 16.0,
-          carbs: 49,
-          protein: 3.9,
-          iron: '16%',
-        },
-        {
-          name: 'Jelly bean',
-          calories: 400,
-          fat: 0.0,
-          carbs: 94,
-          protein: 0.0,
-          iron: '0%',
-        },
-        {
-          name: 'Lollipop',
-          calories: 400,
-          fat: 0.2,
-          carbs: 98,
-          protein: 0,
-          iron: '2%',
-        },
-        {
-          name: 'Honeycomb',
-          calories: 400,
-          fat: 3.2,
-          carbs: 87,
-          protein: 6.5,
-          iron: '45%',
-        },
-        {
-          name: 'Donut',
-          calories: 500,
-          fat: 25.0,
-          carbs: 51,
-          protein: 4.9,
-          iron: '22%',
-        },
-        {
-          name: 'KitKat',
-          calories: 500,
-          fat: 26.0,
-          carbs: 65,
-          protein: 7,
-          iron: '6%',
-        },
-      ],
+      boardList: [],
     }
   },
   mounted() {
-    let tables = document.getElementsByTagName('table');
-    for (let i=0; i<tables.length;i++){
-      resizableGrid(tables[i]);
-    }
-
-    function resizableGrid(table) {
-      let row = table.getElementsByTagName('tr')[0],
-          cols = row ? row.children : undefined;
-      if (!cols) return;
-
-      table.style.overflow = 'hidden';
-
-      let tableHeight = table.offsetHeight;
-
-      for (let i = 0; i < cols.length; i++) {
-        let div = createDiv(tableHeight);
-        cols[i].appendChild(div);
-        cols[i].style.position = 'relative';
-        setListeners(div);
-      }
-
-      function setListeners(div) {
-        let pageX, curCol, nxtCol, curColWidth, nxtColWidth;
-
-        div.addEventListener('mousedown', function (e) {
-          curCol = e.target.parentElement;
-          nxtCol = curCol.nextElementSibling;
-          pageX = e.pageX;
-
-          let padding = paddingDiff(curCol);
-
-          curColWidth = curCol.offsetWidth - padding;
-          if (nxtCol)
-            nxtColWidth = nxtCol.offsetWidth - padding;
-        });
-
-        div.addEventListener('mouseover', function (e) {
-          e.target.style.borderRight = '2px solid #0000ff';
-        })
-
-        div.addEventListener('mouseout', function (e) {
-          e.target.style.borderRight = '';
-        })
-
-        document.addEventListener('mousemove', function (e) {
-          if (curCol) {
-            let diffX = e.pageX - pageX;
-
-            if (nxtCol)
-              nxtCol.style.width = (nxtColWidth - (diffX)) + 'px';
-
-            curCol.style.width = (curColWidth + diffX) + 'px';
-            console.log('curCol: ', curColWidth + diffX, 'nxtCol: ', nxtColWidth - (diffX));
-
-            // let curColWidthDiff = curColWidth + diffX;
-            // let nxtColWidthDiff = nxtColWidth - (diffX);
-            localStorage.setItem('curColWidthDiff', curColWidth + diffX);
-          }
-        });
-
-        document.addEventListener('mouseup', function () {
-          curCol = undefined;
-          nxtCol = undefined;
-          pageX = undefined;
-          nxtColWidth = undefined;
-          curColWidth = undefined;
-          // console.log('culCol: ', curCol, 'nxtCol: ', nxtCol, 'pageX: ', pageX, 'nxtColWidth: ', nxtColWidth, 'curColWidth: ', curColWidth);
-        });
-      }
-
-      function createDiv(height) {
-        let div = document.createElement('div');
-        div.style.top = 0;
-        div.style.right = 0;
-        div.style.width = '5px';
-        div.style.position = 'absolute';
-        div.style.cursor = 'col-resize';
-        div.style.userSelect = 'none';
-        div.style.height = height + 'px';
-        return div;
-      }
-
-      function paddingDiff(col) {
-
-        if (getStyleVal(col, 'box-sizing') == 'border-box') {
-          return 0;
-        }
-
-        let padLeft = getStyleVal(col, 'padding-left');
-        let padRight = getStyleVal(col, 'padding-right');
-        return (parseInt(padLeft) + parseInt(padRight));
-
-      }
-
-      function getStyleVal(elm, css) {
-        return (window.getComputedStyle(elm, null).getPropertyValue(css))
-      }
-    }
+    this.resizeTableRow();
+    this.getCategoryList();
+    this.getBoardList();
   },
   methods: {
-    rowHasPw(row) {
-      const tr = this.desserts.indexOf(row);
-      if(this.desserts[tr].hasPw === true) {
+    resizeTableRow() {
+
+      let tables = document.getElementsByTagName('table');
+      for (let i=0; i<tables.length;i++){
+        resizableGrid(tables[i]);
+      }
+
+      function resizableGrid(table) {
+        let row = table.getElementsByTagName('tr')[0],
+            cols = row ? row.children : undefined;
+        if (!cols) return;
+
+        table.style.overflow = 'hidden';
+
+        let tableHeight = table.offsetHeight;
+
+        for (let i = 0; i < cols.length; i++) {
+          let div = createDiv(tableHeight);
+          cols[i].appendChild(div);
+          cols[i].style.position = 'relative';
+          setListeners(div);
+        }
+
+        function setListeners(div) {
+          let pageX, curCol, nxtCol, curColWidth, nxtColWidth;
+
+          div.addEventListener('mousedown', function (e) {
+            curCol = e.target.parentElement;
+            nxtCol = curCol.nextElementSibling;
+            pageX = e.pageX;
+
+            let padding = paddingDiff(curCol);
+
+            curColWidth = curCol.offsetWidth - padding;
+            if (nxtCol)
+              nxtColWidth = nxtCol.offsetWidth - padding;
+          });
+
+          div.addEventListener('mouseover', function (e) {
+            e.target.style.borderRight = '2px solid #0000ff';
+          })
+
+          div.addEventListener('mouseout', function (e) {
+            e.target.style.borderRight = '';
+          })
+
+          document.addEventListener('mousemove', function (e) {
+            if (curCol) {
+              let diffX = e.pageX - pageX;
+
+              if (nxtCol)
+                nxtCol.style.width = (nxtColWidth - (diffX)) + 'px';
+
+              curCol.style.width = (curColWidth + diffX) + 'px';
+              // console.log('curCol: ', curColWidth + diffX, 'nxtCol: ', nxtColWidth - (diffX));
+
+              // let curColWidthDiff = curColWidth + diffX;
+              // let nxtColWidthDiff = nxtColWidth - (diffX);
+              localStorage.setItem('curColWidthDiff', curColWidth + diffX);
+            }
+          });
+
+          document.addEventListener('mouseup', function () {
+            curCol = undefined;
+            nxtCol = undefined;
+            pageX = undefined;
+            nxtColWidth = undefined;
+            curColWidth = undefined;
+            // console.log('culCol: ', curCol, 'nxtCol: ', nxtCol, 'pageX: ', pageX, 'nxtColWidth: ', nxtColWidth, 'curColWidth: ', curColWidth);
+          });
+        }
+
+        function createDiv(height) {
+          let div = document.createElement('div');
+          div.style.top = 0;
+          div.style.right = 0;
+          div.style.width = '5px';
+          div.style.position = 'absolute';
+          div.style.cursor = 'col-resize';
+          div.style.userSelect = 'none';
+          div.style.height = height + 'px';
+          return div;
+        }
+
+        function paddingDiff(col) {
+
+          if (getStyleVal(col, 'box-sizing') == 'border-box') {
+            return 0;
+          }
+
+          let padLeft = getStyleVal(col, 'padding-left');
+          let padRight = getStyleVal(col, 'padding-right');
+          return (parseInt(padLeft) + parseInt(padRight));
+
+        }
+
+        function getStyleVal(elm, css) {
+          return (window.getComputedStyle(elm, null).getPropertyValue(css))
+        }
+      }
+    },
+    postHasPw(row) {
+      const tr = this.boardList.indexOf(row);
+      let selectedPost = this.boardList[tr];
+      console.log(selectedPost);
+      this.$store.dispatch("boardStore/getBoardStatus", {
+        boardId: selectedPost.boardId,
+        userId: selectedPost.userId,
+      }).then(response => {
+        console.log(response);
+        let status = response.data.status;
+        if(status === "me") {
+          console.log(status, '내 글')
+        } else if(status === "other") {
+          console.log(status, '남의 글')
+        } else {
+          console.log(status, '비밀번호 있음')
+        }
+      })
+
+      this.$store.dispatch("boardStore/getBoardDetail", {
+        boardId: selectedPost.boardId,
+        userId: selectedPost.userId,
+      }).then(response => {
+        console.log(response, 'board detail');
+      })
+
+      if(this.boardList[tr].pwActiveFlag === "Y") {
         router.push('/post-pw')
       } else {
         router.push('/post')
       }
+    },
+    // 카테고리 List 조회
+    getCategoryList() {
+      this.$store.dispatch("boardStore/getCategoryList", {
+      }).then(response => {
+        this.cateGroup = response.data.list;
+        this.cateGroup = this.cateGroup.map(function (obj) {
+          obj['text'] = obj['categoryName'];
+          obj['value'] = obj['categoryId'];
+          delete obj['categoryName'];
+          delete obj['categoryId'];
+          return obj;
+        })
+      })
+    },
+    // 초기 게시글 List 조회
+    getBoardList() {
+      this.$store.dispatch("boardStore/getBoardList", {
+        userId: 1,
+      }).then(response => {
+        this.boardList = response.data.list;
+        for(let a in response.data.list) {
+          this.boardList[a].category = response.data.list[a].category.map(value => value.categoryName);
+        }
+      }).catch(error => {
+        console.log("error", error);
+      })
+          .finally(() => {
+            this.SKloading = false;
+          }
+      )
+    },
+    getSearchBoardList() {
+      this.$store.dispatch("boardStore/getSearchBoardList", {
+        userId: 1,
+        // 검색조건
+        searchStatus: this.selectedSearch,
+        // 검색어
+        searchValue: this.searchWord,
+        // 카테고리 선택
+        categoryIdList: this.cateSelectedStr,
+      }).then(response => {
+        this.boardList = response.data.list;
+        for(let a in response.data.list) {
+          this.boardList[a].category = response.data.list[a].category.map(value => value.categoryName);
+        }
+      }).catch()
     },
   },
 }
