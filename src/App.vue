@@ -1,7 +1,9 @@
 <template>
   <v-app>
     <v-app-bar app clipped-left dense color="green lighten-3"></v-app-bar>
-    <v-navigation-drawer app clipped></v-navigation-drawer>
+    <v-navigation-drawer app clipped>
+      <router-link to="/my-account">내 정보 보기</router-link>
+    </v-navigation-drawer>
     <v-main>
       <router-view/>
     </v-main>

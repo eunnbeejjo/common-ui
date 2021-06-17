@@ -23,7 +23,7 @@
     </v-row>
     <v-row>
       <v-col>
-        카테고리 <v-chip v-for="(cate, index) in postInfo.categories" :key="index" class="mr-1">{{ cate.text }}</v-chip>
+        카테고리 <v-chip v-for="(cate, index) in postInfo.category" :key="index" class="mr-1">{{ cate.categoryName }}</v-chip>
       </v-col>
     </v-row>
     <v-divider class="my-10" />
@@ -33,59 +33,73 @@
       </v-col>
     </v-row>
     <v-divider class="mt-10 mb-3" />
-<!--    댓글 리스트1 (children) -->
-    <!-- v-row>
-      <v-col>
-        <v-treeview v-model="comments" open-all hoverable :items="items">
-          <template v-slot:prepend="{ item }">
-            <div style="position: absolute;">
-              <v-avatar :color="item.pfColor" size="36" class="my-2 mr-2" style="float: left">
-                <span style="color: white; font-size: 14px; font-weight: bold">{{ item.profile }}</span>
-              </v-avatar>
-            </div>
-            <div style="padding-left: 50px;">
-              <v-row>
-                <v-col>
-                  <h4>{{ item.id }}</h4>
-                  <p class="mb-1">{{ item.comment }}</p>
-                  <p class="commentLightFont mr-3" style="float: left;">{{ item.createdAt }}</p>
-                  <p class="commentLightFont" style="cursor: pointer;" @click="reply = true">답글달기</p>
-                </v-col>
-              </v-row>
-            </div>
-          </template>
-        </v-treeview>
-      </v-col>
-    </v-row -->
 
-<v-divider class="mt-10 mb-3" />
+    <v-row v-if="postInfo.attachmentsFlag === 'Y'">
+      <v-col>
+        <p>첨부파일</p>
+      </v-col>
+      <v-col>
+        <a v-for="(i, index) in postInfo.attachments" :key="index"
+           :href="postInfo.attachments[index].locationPath" style="display: block">
+          {{ postInfo.attachments[index].attachmentsName }}</a>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="!commentFlag">
+      <v-col>
+        <p style="text-align: center; color: #aaaaaa; font-size: 14px; margin-top: 30px;">댓글 작성이 제한된 게시글입니다.</p>
+      </v-col>
+    </v-row>
+<v-divider v-if="commentFlag" class="mt-10 mb-3" />
 <!--    댓글 리스트2 (depth) -->
-    <v-row>
+    <v-row v-if="commentFlag">
       <v-col>
         <ul class="px-10">
-          <li v-for="item in items2" style="">
+          <li v-for="(item, index) in commentList" :key="index" style="">
 <!--            댓글 depth 버퍼 -->
-            <div v-for="a in item.depth" :key="a" style="float: left; width: 40px; height: 10px; margin-right: 5px;"></div>
-            <div style="display: flex">
-            <div>
+            <div v-for="a in item.commentLayer" :key="a" style="float: left; width: 40px; height: 10px; margin-right: 5px;"></div>
+            <div style="display: grid">
+            <!-- div>
               <v-avatar :color="item.pfColor" size="36" class="my-2 mr-3" style="float: left">
                 <span style="color: white; font-size: 14px; font-weight: bold">{{ item.profile }}</span>
               </v-avatar>
-            </div>
+            </div -->
             <div>
-              <h4>{{ item.id }}</h4>
-              <p class="mb-1">{{ item.comment }}</p>
-              <p class="commentLightFont mr-3" style="float: left">{{ item.createdAt }}</p>
-              <p class="commentLightFont" style="cursor: pointer;" @click="reply2 = true">답글달기</p>
+<!--              댓글 정보 -->
+              <h4>{{ item.userId }}</h4>
+              <p class="mb-1">{{ item.contents }}</p>
+              <p class="commentLightFont mr-3" style="float: left">{{ item.updateAt }}</p>
+              <p class="commentLightFont mr-3" style="float: left">{{ item.commentGroup }}</p>
+              <p class="commentLightFont mr-3" style="float: left">{{ item.commentOrder }}</p>
+              <p class="commentLightFont mr-3" style="float: left">{{ item.commentLayer }}</p>
+              <p class="commentLightFont" style="cursor: pointer; margin-right: 10px; float: left" @click="addReply(index)">답글달기</p>
+              <p v-if="isWriter" class="commentLightFont" style="cursor: pointer; margin-right: 10px; float: left" @click="deleteComment(item)">삭제</p>
+              <p v-if="isWriter" class="commentLightFont" style="cursor: pointer;" @click="commentUpdate(item, index)">수정</p>
+<!--              댓글 작성 -->
               <v-expand-transition>
-              <div v-if="reply2">
+<!--                댓글에 대한 답글 -->
+              <div v-if="replyOpen === index">
                 <v-card class="px-5 py-2" elevation="0" outlined>
                   <!--          댓글 작성자 ID -->
-                  <h4>eunnbeejjo</h4>
-                  <v-textarea solo flat counter="30" placeholder="댓글을 남겨보세요" rows="1" />
-                  <v-btn @click="reply2 = false">등록</v-btn>
+                  <h4>{{ item.userId }}</h4>
+                  <v-textarea solo flat counter="30" v-model="reply" placeholder="댓글을 남겨보세요" rows="2" />
+                  <v-btn @click="cancelReplyOpen">취소</v-btn>
+                  <v-btn @click="createReply(item)">등록</v-btn>
                 </v-card>
               </div>
+              </v-expand-transition>
+<!--              댓글 수정 -->
+              <v-expand-transition>
+                <!--                댓글에 대한 답글 -->
+                <div v-if="replyUpdateOpen === index">
+                  <v-card class="px-5 py-2" elevation="0" outlined>
+                    <!--          댓글 작성자 ID -->
+                    <h4>{{ item.userId }}</h4>
+                    <v-textarea solo flat counter="30" v-model="reply" :rules="[rules.required, rules.counter]" maxlength="250" placeholder="댓글을 남겨보세요" rows="2" />
+                    <v-btn @click="cancelReplyOpen">취소</v-btn>
+                    <v-btn @click="updateComment(item)">등록</v-btn>
+                  </v-card>
+                </div>
               </v-expand-transition>
             </div>
             </div>
@@ -95,13 +109,13 @@
     </v-row>
 
 <!--    댓글 작성 -->
-    <v-row>
+    <v-row v-if="commentFlag">
       <v-col>
         <v-card class="px-5 py-2" elevation="0" outlined>
 <!--          댓글 작성자 ID -->
-          <h4>eunnbeejjo</h4>
-          <v-textarea solo flat counter="30" placeholder="댓글을 남겨보세요" rows="1" />
-          <v-btn>등록</v-btn>
+          <h4>사용자 아이디 : {{ this.$route.params.id }}</h4>
+          <v-textarea solo flat counter="30" v-model="comment" :rules="[rules.required, rules.counter]" maxlength="250" placeholder="댓글을 남겨보세요" rows="2" />
+          <v-btn @click="createComment">등록</v-btn>
         </v-card>
       </v-col>
     </v-row>
@@ -109,7 +123,8 @@
     <v-row>
       <v-col>
 <!--        수정버튼은 작성자에게만 공개 -->
-        <v-btn @click="isWriter">수정</v-btn>
+        <v-btn v-if="isWriter" @click="moveToUpdate">수정</v-btn>
+        <v-btn v-if="isWriter" @click="deleteBoard">삭제</v-btn>
         <v-btn @click="$router.push('/general-forum')">목록</v-btn>
       </v-col>
     </v-row>
@@ -117,120 +132,38 @@
 </template>
 
 <script>
+import router from "../../router";
+
 export default {
   name: 'Post',
   data() {
     return {
-      reply: false,
+      reply: '',
+      comment: '',
       reply2: false,
+      replyOpen: null,
+      replyUpdateOpen: null,
       comments: [],
       commentCount: [v => v.length <= 30 || '최대 30자 가능'],
-      items2: [
+      commentList: [
         {
-          depth: 0,
-          id: 'name1',
-          profile: 'EB',
-          pfColor: 'pink',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.'
-        },
-        {
-          depth: 0,
-          id: 'name1',
-          profile: 'AA',
-          pfColor: 'brown',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 1,
-          id: 'name1',
-          profile: 'CC',
-          pfColor: 'cyan',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 2,
-          id: 'name1',
-          profile: 'WE',
-          pfColor: 'orange',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 3,
-          id: 'name1',
-          profile: 'GH',
-          pfColor: 'blue',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 1,
-          id: 'name1',
-          profile: 'UY',
-          pfColor: 'green',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 1,
-          id: 'name1',
-          profile: 'SW',
-          pfColor: 'purple',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          depth: 2,
-          id: 'name1',
-          profile: 'JH',
-          pfColor: 'black',
-          createdAt: '2021.05.25 15:45:15',
-          comment: '2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.',
-        },
+          userId: '',
+          updateAt: '',
+          contents: '',
+          commentGroup: '',
+          commentOrder: '',
+          commentLayer: '',
+        }
       ],
-      items: [
+      replyArr: [
         {
-          id: 'name1',
-          profile: 'EB',
-          pfColor: 'pink',
-          createdAt: '2021.05.26 15:55:55',
-          comment: '댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. 댓글내용입니다요. ',
-        },
-        {
-          id: 'name2',
-          profile: 'GP',
-          pfColor: 'brown',
-          createdAt: '2021.05.26 15:55:55',
-          comment: '2번이 쓴 댓글입니다잉',
-          children: [
-            {
-              id: 'name2-1',
-              profile: 'HJ',
-              pfColor: 'green',
-              createdAt: '2021.05.26 15:55:55',
-              comment: '2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인 것이죠',
-              children: [
-                {
-                  id: 'name2-1-1',
-                  profile: 'SJ',
-                  pfColor: 'orange',
-                  createdAt: '2021.05.26 15:55:55',
-                  comment: 'I got bored bout writing these down, let everything goes well :-)'
-                }
-              ],
-            },
-            {
-              id: 'name2-2',
-              profile: 'GH',
-              pfColor: 'blue',
-              createdAt: '2021.05.26 15:55:55',
-              comment: '2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.2번이 쓴 댓글에 답글을 단 것입니다. 즉 댓글의 답글인데 답글 중 2번째.'
-            },
-          ]
-        },
+          userId: '',
+          updateAt: '',
+          contents: '',
+          commentGroup: '',
+          commentOrder: '',
+          commentLayer: '',
+        }
       ],
       postInfo: {
         title: '',
@@ -240,27 +173,138 @@ export default {
         userId: '',
         categories: [],
         contents: "",
+        attachmentsFlag: "",
+        attachments: [
+          {
+            attachmentsId: '',
+            attachmentsName: '',
+            fileType: '',
+            locationPath: '',
+          }
+        ],
+      },
+      isWriter: false,
+      commentFlag: true,
+
+      attachmentLink: '',
+
+      rules: {
+        required: value => !!value || '필수 입력 항목입니다.',
+        counter: value => value.length <= 250 || '댓글은 최대 250자 이내로 작성해주세요.'
       },
     }
   },
   mounted() {
     this.getBoardDetail();
+    this.getCommentList();
   },
   methods: {
+    addReply(value) {
+      this.replyOpen = value;
+    },
     getBoardDetail() {
       this.$store.dispatch("boardStore/getBoardDetail", {
-        boardId: 1,
+        boardId: this.$route.query.boardId,
         userId: 1,
       }).then(response => {
         console.log(response, 'response');
-        let post = response.data;
-        this.postInfo = post;
-        console.log(post, 'post');
+        this.postInfo = response.data;
+        // 댓글 기능 사용 여부
+        if(this.postInfo.commentFlag === 'N') {
+          this.commentFlag = false;
+        } else {
+          this.commentFlag = true;
+        }
+        // 하나는 문자열, 하나는 숫자라서 !== 아닌 != 으로 했음, !== 쓰고싶으면 형변환해야함
+        if(this.$route.params.id != this.postInfo.userId) {
+          this.isWriter = false;
+        } else {
+          this.isWriter = true;
+        }
       })
     },
-    isWriter() {
-      // if(this.postInfo.userId === userId)
-      // return true;
+    moveToUpdate() {
+      router.push({ path: '/update-post/'+1, query: { boardId: this.$route.query.boardId } });
+    },
+    deleteBoard() {
+      this.$store.dispatch("boardStore/deleteBoard", {
+        data: {
+          boardId: this.$route.query.boardId,
+          userId: 1
+        }
+      }).then(response => {
+        alert('게시물 삭제 완료!');
+        router.push('/general-forum');
+      })
+    },
+    getCommentList() {
+      this.$store.dispatch("boardStore/getCommentList", {
+        boardId: this.$route.query.boardId
+      }).then(response => {
+        this.commentList = response.data.list;
+      })
+    },
+    createComment() {
+      if(this.comment === '') {
+        alert('댓글을 입력해주세요');
+      } else if(this.comment !== '') {
+        this.$store.dispatch("boardStore/createComment", {
+          boardId: this.$route.query.boardId,
+          userId: 1,
+          contents: this.comment,
+        }).then(response => {
+          this.getCommentList();
+          this.comment = '';
+        })
+      }
+    },
+    createReply(value) {
+      this.$store.dispatch("boardStore/createReply", {
+        boardId: this.$route.query.boardId,
+        userId: 1,
+        contents: this.reply,
+        commentGroup: value.commentGroup,
+        commentOrder: value.commentOrder,
+        commentLayer: value.commentLayer,
+      }).then(response => {
+        this.getCommentList();
+        this.replyOpen = null;
+        this.reply = '';
+      })
+    },
+    updateComment(value) {
+      this.$store.dispatch("boardStore/updateComment", {
+        commentId: value.commentId,
+        boardId: this.$route.query.boardId,
+        userId: 1,
+        contents: this.reply,
+      }).then(response => {
+        this.getCommentList();
+        this.replyUpdateOpen = null;
+        this.reply = '';
+      })
+    },
+    commentUpdate(item, index) {
+      this.replyUpdateOpen = index;
+      this.reply = item.contents;
+    },
+    cancelReplyOpen() {
+      this.replyOpen = null;
+      this.replyUpdateOpen = null;
+      this.reply = '';
+    },
+    deleteComment(value) {
+      this.$store.dispatch("boardStore/deleteComment", {
+        data: {
+          commentId: value.commentId,
+          boardId: this.$route.query.boardId,
+          userId: 1
+        }
+      }).then(response => {
+        console.log(response, 'delete comment')
+        alert('댓글 삭제 완료')
+        this.getCommentList();
+      })
     },
   },
 }

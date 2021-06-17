@@ -9,6 +9,7 @@ import CreatePost from "../views/generalForum/CreatePost";
 import Post from "../views/generalForum/Post";
 import UpdatePost from "../views/generalForum/UpdatePost";
 import PostPw from "../views/generalForum/PostPw";
+import MyAccount from "../views/MyAccount";
 
 Vue.use(VueRouter)
 
@@ -44,12 +45,12 @@ const routes = [
     component: CreatePost
   },
   {
-    path: '/post',
+    path: '/post/:id',
     name: 'post',
     component: Post
   },
   {
-    path: '/update-post',
+    path: '/update-post/:id',
     name: 'update-post',
     component: UpdatePost
   },
@@ -57,6 +58,11 @@ const routes = [
     path: '/post-pw',
     name: 'post-pw',
     component: PostPw
+  },
+  {
+    path: '/my-account',
+    name: 'my-account',
+    component: MyAccount
   },
 ]
 

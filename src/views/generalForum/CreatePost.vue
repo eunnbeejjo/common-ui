@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-text-field placeholder="제목 입력해라" v-model="title"></v-text-field>
+    <v-text-field placeholder="제목 입력해라" v-model="title" maxlength="30"></v-text-field>
     <v-row>
       <v-col>
         <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
@@ -24,12 +24,22 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col>파일 첨부</v-col>
-      <v-col><v-file-input></v-file-input></v-col>
+      <v-col><v-checkbox v-model="attachmentsFlag" true-value="Y" false-value="N" label="파일 첨부"></v-checkbox></v-col>
+
+      <v-col>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile1"
+                           counter chips show-size truncate-length="50"></v-file-input>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile2"
+                           counter chips show-size truncate-length="50"></v-file-input>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile3"
+                           counter chips show-size truncate-length="50"></v-file-input>
+      </v-col>
+<!--      <v-col><v-btn @click="uploadMultipleFiles">파일업로드 </v-btn></v-col>-->
+
     </v-row>
     <v-row>
       <v-col><v-checkbox v-model="pwActiveFlag" true-value="Y" false-value="N" label="비밀번호 사용" value="hasPassword"></v-checkbox></v-col>
-      <v-col><v-text-field :disabled="pwActiveFlag === 'N'" v-model="password" type="password" placeholder="비밀번호 입력" autocomplete="new-password"></v-text-field></v-col>
+      <v-col><v-text-field maxlength="20" :disabled="pwActiveFlag === 'N'" v-model="password" type="password" placeholder="비밀번호 입력" autocomplete="new-password"></v-text-field></v-col>
     </v-row>
     <v-row>
       <v-col>댓글 사용 여부</v-col>
@@ -64,19 +74,28 @@ export default {
     title: '',
     contents: '',
 
-    commentFlag: "Y",
-    privateFlag: "N",
-    pwActiveFlag: "N",
+    commentFlag: 'Y',
+    privateFlag: 'N',
+    pwActiveFlag: 'N',
     password: '',
 
-    attachments: "N",
+    attachments: [],
+    attachmentsFlag: 'N',
+
+    fileName: null,
 
     categoryId: [],
-    cateSelectedStr: '',
+    cateSelectedValue: '',
 
     editor: DecoupledEditor,
     cateSelect: [],
     cateGroup: [{}],
+
+    rules: {
+      required: value => !!value || '필수 입력 항목입니다.',
+      titleCounter: value => value.length <= 30 || '최대 30자 이내로 작성해주세요',
+      pwCounter: value => value.length <= 20 || '비밀번호는 최대 20자까지 설정 가능합니다.'
+    },
   }),
   watch: {
     cateSelect (val) {
@@ -84,8 +103,8 @@ export default {
         this.$nextTick(() => this.cateSelect.pop());
         alert('카테고리는 3개까지 추가 가능합니다!');
       }
-      this.cateSelectedStr = this.cateSelect.map(value => value.value);
-    }
+      this.cateSelectedValue = this.cateSelect.map(value => value.value);
+    },
   },
   mounted() {
     this.getCategoryList();
@@ -97,10 +116,6 @@ export default {
           editor.ui.view.toolbar.element,
           editor.ui.getEditableElement()
       );
-    },
-    savePost() {
-      alert('저장되었습니다!');
-      router.push('/general-forum')
     },
     // 카테고리 List 조회
     getCategoryList() {
@@ -117,20 +132,74 @@ export default {
         this.cateGroup.splice(0, 1);
       })
     },
+    onClickFileUpload() {
+      this.$refs.fileInput.click();
+    },
+    onChangeFile(e) {
+      console.log(e.target.files);
+      const fileName = e.target.files[0].name;
+      console.log(fileName, 'file name');
+      this.fileName = fileName;
+    },
+    selectFile1(file) {
+      this.file1 = file;
+    },
+    selectFile2(file) {
+      this.file2 = file;
+    },
+    selectFile3(file) {
+      this.file3 = file;
+    },
     createBoard() {
-      this.$store.dispatch("boardStore/createBoard", {
-        userId: 1,
-        title: this.title,
-        contents: this.contents,
-        pwActiveFlag: this.pwActiveFlag,
-        password: this.password,
-        attachmentsFlag: this.attachmentsFlag,
-        privateFlag: this.privateFlag,
-        categoryId: this.cateSelectedStr,
-        commentFlag: this.commentFlag,
-      }).then(response => {
-        console.log(response, 'response');
-      }).catch()
+      if(this.title === '') {
+        alert('제목을 입력하세요');
+      } else if(this.contents === '') {
+        alert('내용을 입력하세요');
+      } else if(this.cateSelectedValue === '' || this.cateSelectedValue.length === 0) {
+        alert('카테고리를 최소 1개 선택해주세요')
+      } else if(this.pwActiveFlag === 'Y' && this.password === '') {
+        alert('사용할 비밀번호를 입력해주세요');
+      } else {
+        this.$store.dispatch("boardStore/createBoard", {
+          userId: 1,
+          title: this.title,
+          contents: this.contents,
+          pwActiveFlag: this.pwActiveFlag,
+          password: this.password,
+          attachmentsFlag: this.attachmentsFlag,
+          privateFlag: this.privateFlag,
+          categoryId: this.cateSelectedValue,
+          commentFlag: this.commentFlag,
+        }).then(response => {
+          console.log(response, 'create response');
+          if(response.data.attachmentsFlag === "Y") {
+            // upload multiple files
+            let formData = new FormData();
+            formData.append("files", this.file1);
+            formData.append("files", this.file2);
+            formData.append("files", this.file3);
+            let data = {
+              params: {
+                boardId: response.data.boardId,
+              },
+              formData
+            }
+            this.$store.dispatch("boardStore/uploadMultipleFiles", data)
+                .then(response => {
+                  console.log(response, 'create response with attachments');
+                })
+                .catch(error => {
+                  console.log('error', error);
+                })
+          } else if(response.data.attachmentsFlag === "N") {
+            console.log(response, 'create response without attachments');
+          }
+          alert('저장되었습니다!');
+          router.push('/general-forum');
+        }).catch(error => {
+          console.log(error, 'error');
+        })
+      }
     },
   },
 }

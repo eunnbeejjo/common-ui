@@ -5,7 +5,7 @@ const instance = axios.create({
     baseURL: process.env.VUE_APP_URI,
     headers: {
         "Accept" : "*/*",
-        "Content-Type" : "application/json",
+        // "Content-Type" : "application/json",
     },
 });
 

@@ -35,7 +35,7 @@
                           @click:row="postHasPw" v-show="!SKloading" :loading="SKloading">
               <template v-slot:item.title="{item}">
                 <span>{{ item.title }}</span>
-                <v-icon v-if="item.privateFlag === 'Y'" small class="ml-1">mdi-paperclip</v-icon>
+                <v-icon v-if="item.attachmentsFlag === 'Y'" small class="ml-1">mdi-paperclip</v-icon>
                 <v-icon v-if="item.pwActiveFlag === 'Y'" small class="ml-1">mdi-lock</v-icon>
               </template>
             </v-data-table>
@@ -65,16 +65,6 @@ import router from "../../router";
 
 export default {
   name: 'GeneralForum',
-  watch: {
-    cateSelect (val) {
-      if(val.length > 3) {
-        this.$nextTick(() => this.cateSelect.pop());
-        alert('카테고리는 3개까지 검색 가능합니다!');
-      }
-      this.cateSelectedStr = this.cateSelect.map(value => value.value).join();
-      console.log(this.cateSelectedStr, 'qwerqerqerqw');
-    }
-  },
   props: {
     loading: {type: Boolean, default: true},
   },
@@ -86,7 +76,7 @@ export default {
       itemsPerPage: 10,
       pageGroup: [5, 10, 15, 20],
       cateSelect: [{text: "전체", value: 1}],
-      cateSelectedStr: '1',
+      cateSelectedValue: '1',
       selectedSearch: 'all',
       search: [
         { text: '전체', value: 'all'},
@@ -94,7 +84,7 @@ export default {
         { text: '제목', value: 'title'},
         { text: '내용', value: 'contents'},
       ],
-      searchWord: 'test',
+      searchWord: '',
       cateGroup: [{}],
       headers: [
         { text: 'No.', align: 'start', value: 'boardId', width: 70 },
@@ -111,6 +101,34 @@ export default {
     this.resizeTableRow();
     this.getCategoryList();
     this.getBoardList();
+  },
+  watch: {
+    cateSelect (val) {
+      console.log(val, 'value')
+      if(val.length > 3) {
+        this.$nextTick(() => this.cateSelect.pop());
+        alert('카테고리는 3개까지 검색 가능합니다!');
+      }
+      /*console.log(val.length);
+      let isAll = 0;
+      for(let a=0; a<val.length; a++) {
+        if(val[a].value === 1) {
+          isAll = 1;
+        } else {
+          isAll = 0;
+        }
+      }
+      if(isAll !== 0) {
+        console.log('1 포함')
+        this.cateSelect = this.cateGroup;
+      } else if(isAll === 0) {
+        console.log('1 없음')
+        this.cateSelect = [];
+        // this.cateSelect = val;
+      }
+      console.log(isAll, 'isAll');*/
+      this.cateSelectedValue = this.cateSelect.map(value => value.value).join();
+    }
   },
   methods: {
     resizeTableRow() {
@@ -187,8 +205,8 @@ export default {
 
         function createDiv(height) {
           let div = document.createElement('div');
-          div.style.top = 0;
-          div.style.right = 0;
+          div.style.top = '0px';
+          div.style.right = '0px';
           div.style.width = '5px';
           div.style.position = 'absolute';
           div.style.cursor = 'col-resize';
@@ -199,7 +217,7 @@ export default {
 
         function paddingDiff(col) {
 
-          if (getStyleVal(col, 'box-sizing') == 'border-box') {
+          if (getStyleVal(col, 'box-sizing') === 'border-box') {
             return 0;
           }
 
@@ -217,34 +235,20 @@ export default {
     postHasPw(row) {
       const tr = this.boardList.indexOf(row);
       let selectedPost = this.boardList[tr];
-      console.log(selectedPost);
       this.$store.dispatch("boardStore/getBoardStatus", {
         boardId: selectedPost.boardId,
-        userId: selectedPost.userId,
+        userId: 1,
       }).then(response => {
-        console.log(response);
         let status = response.data.status;
         if(status === "me") {
-          console.log(status, '내 글')
+          router.push({ path: '/post/'+1, query: { boardId: selectedPost.boardId } })
+          // router.push({ path: '/post/'+selectedPost.userId, query: { boardId: selectedPost.boardId } })
         } else if(status === "other") {
-          console.log(status, '남의 글')
+          router.push({ path: '/post/'+1, query: { boardId: selectedPost.boardId } })
         } else {
-          console.log(status, '비밀번호 있음')
+          router.push({ path: '/post-pw', query: { boardId: selectedPost.boardId } })
         }
       })
-
-      this.$store.dispatch("boardStore/getBoardDetail", {
-        boardId: selectedPost.boardId,
-        userId: selectedPost.userId,
-      }).then(response => {
-        console.log(response, 'board detail');
-      })
-
-      if(this.boardList[tr].pwActiveFlag === "Y") {
-        router.push('/post-pw')
-      } else {
-        router.push('/post')
-      }
     },
     // 카테고리 List 조회
     getCategoryList() {
@@ -258,6 +262,12 @@ export default {
           delete obj['categoryId'];
           return obj;
         })
+        // console.log(this.cateGroup, 'cate group')
+        for(let a=0; a<this.cateGroup.length; a++) {
+          if(this.cateGroup[a].value === 1) {
+            console.log('1 포함');
+          }
+        }
       })
     },
     // 초기 게시글 List 조회
@@ -265,6 +275,7 @@ export default {
       this.$store.dispatch("boardStore/getBoardList", {
         userId: 1,
       }).then(response => {
+        console.log(response, 'board list');
         this.boardList = response.data.list;
         for(let a in response.data.list) {
           this.boardList[a].category = response.data.list[a].category.map(value => value.categoryName);
@@ -285,7 +296,7 @@ export default {
         // 검색어
         searchValue: this.searchWord,
         // 카테고리 선택
-        categoryIdList: this.cateSelectedStr,
+        categoryIdList: this.cateSelectedValue,
       }).then(response => {
         this.boardList = response.data.list;
         for(let a in response.data.list) {

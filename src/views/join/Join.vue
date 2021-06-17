@@ -271,7 +271,7 @@
           <v-row>
             <v-col>
               <v-btn>취소</v-btn>
-              <v-btn>회원가입</v-btn>
+              <v-btn @click="signUp">회원가입</v-btn>
             </v-col>
           </v-row>
         </v-card>
@@ -282,15 +282,13 @@
 
 <script>
 import DaumPostcode from 'vuejs-daum-postcode'
+import router from "../../router";
 
 export default {
   name: "Join",
   components: { DaumPostcode },
   data() {
     return {
-      zip: '',
-      addr1: '',
-      addr2: '',
       openPostcodeApi: false,
 
       imageUrl: null,
@@ -310,7 +308,7 @@ export default {
 
       email: "test5@test.com",
       password: "qwer1234!",
-      passwordConfirm: '',
+      passwordConfirm: 'qwer1234!',
       name: "tester4",
       nickName: "test nickName4",
       birth: "2000-01-01",
@@ -381,8 +379,8 @@ export default {
         addr1 = data.roadAddress;
       }
       zip = data.zonecode;
-      this.zip = zip;
-      this.addr1 = addr1;
+      this.address.zipCode = zip;
+      this.address.address = addr1;
       this.openPostcodeApi = false;
     },
 
@@ -403,7 +401,42 @@ export default {
       this.imageUrl = URL.createObjectURL(file);
       this.imageFileName = fileName;
       this.file = file;
-    }
+    },
+    signUp() {
+      this.$store.dispatch("authStore/signUp", {
+        email: this.email,
+        password: this.password,
+        name: this.name,
+        nickName: this.nickName,
+        birth: this.birth,
+        phone: this.phone,
+        gender: this.gender,
+        userType: this.userType,
+        role: this.role,
+        loginType: this.loginType,
+        address: {
+          address: this.address.address,
+          subAddress: this.address.subAddress,
+          zipCode: this.address.zipCode,
+          baseAddress: this.address.baseAddress,
+        },
+        policies: {
+          policyAgreements: [
+            {
+              policyId: this.policies.policyAgreements[0].policyId,
+              agreement: this.policies.policyAgreements[0].agreement,
+            }
+          ]
+        },
+        profileId: this.profileId,
+      }).then(response => {
+        console.log(response, 'join response');
+        alert('회원가입 성공');
+        router.push('/login');
+      }).catch(error => {
+        console.log(error, 'error');
+      })
+    },
   },
 }
 </script>

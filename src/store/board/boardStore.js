@@ -26,29 +26,35 @@ export default {
         getAttachments({}, payload) {
             return http.get("", {params: payload});
         },
-        getComments({}, payload) {
-            return http.get("", {params: payload});
+        uploadMultipleFiles({}, payload) {
+            return http.post("attachments/multiple", payload.formData, {params: payload.params})
+        },
+        getCommentList({}, payload) {
+            return http.get("comments/" + payload.boardId, {params: payload});
         },
         getBoardPasswordConfirm({}, payload) {
-            return http.post("", payload);
+            return http.post("boards/password", payload);
         },
         createBoard({}, payload) {
             return http.post("boards", payload);
         },
-        createComment({}, payload) {
-            return http.post("", payload);
-        },
         updateBoard({}, payload) {
-            return http.patch("", payload);
+            return http.put("boards/detail", payload);
+        },
+        deleteBoard({}, payload) {
+            return http.delete("boards/detail", payload);
+        },
+        createComment({}, payload) {
+            return http.post("comments", payload);
         },
         updateComment({}, payload) {
-            return http.patch("", payload);
+            return http.put("comments", payload);
         },
-        removeBoard({}, payload) {
-            return http.delete("", payload);
+        deleteComment({}, payload) {
+            return http.delete("comments", payload);
         },
-        removeComment({}, payload) {
-            return http.delete("", payload);
+        createReply({}, payload) {
+            return http.post("comments/reply", payload);
         },
     },
     modules: {},
