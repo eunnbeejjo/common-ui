@@ -12,7 +12,7 @@
       </v-col>
       <v-col>
         <v-combobox v-model="cateSelect" :items="cateGroup" placeholder="카테고리(최대 3개)" multiple
-                    dense hide-details class="mr-2">
+                    dense hide-details class="mr-2" @change="onChangeCate">
           <template v-slot:selection="{attrs, item, parent, selected}">
             <v-chip v-if="item === Object(item)" v-bind="attrs" :input-value="selected" small>
               <span>{{ item.text }}</span>
@@ -25,10 +25,12 @@
     <v-row>
       <v-col><v-checkbox v-model="attachmentsFlag" true-value="Y" false-value="N" label="파일 첨부"></v-checkbox></v-col>
 
-      <v-col>
-        <!-- v-chip v-for="a in filetest" :key="a" v-if="filetest[a]!==null" close @click:close="filetest[a] = null">
-          {{ filetest[a].attachmentsName }}({{ Math.round(filetest[a].size/100)/10 }} kB)
-        </v-chip -->
+      <v-col v-if="attachmentsFlag === 'Y'">
+        <v-chip v-for="(file, index) in attachments" :key="index"
+                v-if="isNull(file)" close @click:close="filePop(file)"
+                class="mr-2 mb-1">
+          {{ file.attachmentsName }}({{ Math.round(file.size/100)/10 }} kB)
+        </v-chip>
 
 <!--        <v-chip v-if="filename1!==null" close @click:close="filename1 = null">
           {{ filename1.attachmentsName }}({{ Math.round(filename1.size/100)/10 }} kB)
@@ -40,15 +42,12 @@
           {{ filename3.attachmentsName }}({{ Math.round(filename3.size/100)/10 }} kB)
         </v-chip>-->
 
-        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile1"
-                      counter show-size truncate-length="50">
-        </v-file-input>
-        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile2"
-                      counter chips show-size truncate-length="50">
-        </v-file-input>
-        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile3"
-                      counter chips show-size truncate-length="50">
-        </v-file-input>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile1" v-show="attachments.length < 3"
+                      counter show-size truncate-length="50"></v-file-input>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile2" v-show="attachments.length < 2"
+                      counter chips show-size truncate-length="50"></v-file-input>
+        <v-file-input :disabled="attachmentsFlag === 'N'" @change="selectFile3" v-show="attachments.length < 1"
+                      counter chips show-size truncate-length="50"></v-file-input>
       </v-col>
 
     </v-row>
@@ -68,7 +67,7 @@
     </v-row>
     <v-row>
       <v-col>
-        <v-btn @click="$router.push('/post')">취소</v-btn>
+        <v-btn @click="cancelUpdate">취소</v-btn>
         <v-btn @click="updateBoard">저장</v-btn>
       </v-col>
     </v-row>
@@ -94,18 +93,18 @@ export default {
     privateFlag: '',
     pwActiveFlag: '',
     password: '',
-    filename1: null,
-    filename2: null,
-    filename3: null,
-    filetest: [],
 
     attachments: [],
     attachmentsFlag: 'N',
-
-    fileName: null,
+    attachmentsList: [],
+    attachmentsIds: '',
+    file1: '',
+    file2: '',
+    file3: '',
 
     categoryId: [],
     cateSelectedValue: '',
+    cateArr: [],
 
     editor: DecoupledEditor,
     cateSelect: [],
@@ -119,28 +118,35 @@ export default {
   }),
   watch: {
     cateSelect (val) {
-      if(val.length > 3) {
-        this.$nextTick(() => this.cateSelect.pop());
-        alert('카테고리는 3개까지 추가 가능합니다!');
-      }
       this.cateSelectedValue = this.cateSelect.map(value => value.value);
-    },
-    attachmentsFlag() {
-      if(this.attachmentsFlag === "N") {
-        // this.filename1 = null;
-        // this.filename2 = null;
-        // this.filename3 = null;
-        for(let a in this.filetest) {
-          this.filetest[a] = null;
-        }
-      }
     },
   },
   mounted() {
-    this.getCategoryList();
     this.getBoardDetail();
+    this.getCategoryList();
   },
   methods: {
+    isNull(val) {
+      if(val !== null) {
+        return true;
+      }
+    },
+    filePop(val) {
+      console.log(val, 'value')
+      let idx = this.attachments.findIndex(function (item) {
+        return item.attachmentsId === val.attachmentsId
+      })
+      if(idx > -1) {
+        this.attachments.splice(idx, 1);
+      }
+      this.attachmentsIds = this.attachments.map(value => value.attachmentsId).join();
+    },
+    onChangeCate(val) {
+      if(val.length > 3) {
+        this.$nextTick(() => val.pop());
+        alert('카테고리는 3개까지 추가 가능합니다.');
+      }
+    },
     onReady( editor ) {
       // Insert the toolbar before the editable area.
       editor.ui.getEditableElement().parentElement.insertBefore(
@@ -168,21 +174,27 @@ export default {
         boardId: this.$route.query.boardId,
         userId: 1,
       }).then(response => {
-        console.log(response, 'get post detail');
+        console.log(response, 'get board detail');
         let originDetail = response.data;
+
+        for(let i in originDetail.category) {
+          this.cateSelect[i] = {
+            text: originDetail.category[i].categoryName,
+            value: originDetail.category[i].categoryId,
+          }
+        }
+        this.cateSelectedValue = this.cateSelect.map(value => value.value);
+
         this.title = originDetail.title;
         this.contents = originDetail.contents;
         this.pwActiveFlag = originDetail.pwActiveFlag;
         this.password = originDetail.password;
         this.attachmentsFlag = originDetail.attachmentsFlag;
         this.privateFlag = originDetail.privateFlag;
-        this.categoryId = originDetail.categoryId;
         this.commentFlag = originDetail.commentFlag;
         this.boardId = originDetail.boardId;
-        this.filetest = originDetail.attachments;
-        this.filename1 = originDetail.attachments[0];
-        this.filename2 = originDetail.attachments[1];
-        this.filename3 = originDetail.attachments[2];
+        this.attachments = originDetail.attachments;
+        this.attachmentsIds = this.attachments.map(value => value.attachmentsId).join();
       })
     },
     onClickFileUpload() {
@@ -232,13 +244,15 @@ export default {
             formData.append("files", this.file1);
             formData.append("files", this.file2);
             formData.append("files", this.file3);
-            let data = {
+
+            this.$store.dispatch("boardStore/uploadMultipleFiles", {
               params: {
                 boardId: response.data.boardId,
+                attachmentsIds: this.attachmentsIds,
+                status: 'U',
               },
               formData
-            }
-            this.$store.dispatch("boardStore/uploadMultipleFiles", data)
+            })
                 .then(response => {
                   console.log(response, 'update response with attachments');
                 })
@@ -247,6 +261,15 @@ export default {
                 })
           } else if(response.data.attachmentsFlag === "N") {
             console.log(response, 'update response without attachments');
+            this.$store.dispatch("boardStore/deleteMultipleFiles", {
+              params: {
+                boardId: this.$route.query.boardId
+              }
+            }).then(response => {
+              console.log(response, 'delete multiple files');
+            }).catch(error => {
+              console.log(error, 'error');
+            })
           }
           alert('저장되었습니다!');
           router.push({ path: '/post/'+1, query: { boardId: response.data.boardId } })
@@ -254,6 +277,9 @@ export default {
           console.log(error, 'error')
         })
       }
+    },
+    cancelUpdate() {
+      router.push({path: '/post/'+1, query: { boardId: this.$route.query.boardId }});
     },
   },
 }

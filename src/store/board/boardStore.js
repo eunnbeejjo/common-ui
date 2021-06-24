@@ -14,20 +14,17 @@ export default {
         getSearchBoardList({}, payload) {
             return http.get("boards/search/" + payload.userId, {params: payload});
         },
-        getBoardOwnerConfirm({}, payload) {
-            return http.get("", {params: payload});
-        },
         getBoardStatus({}, payload) {
             return http.get("boards/status", {params: payload});
         },
         getBoardDetail({}, payload) {
             return http.get("boards/detail", {params: payload});
         },
-        getAttachments({}, payload) {
-            return http.get("", {params: payload});
-        },
         uploadMultipleFiles({}, payload) {
             return http.post("attachments/multiple", payload.formData, {params: payload.params})
+        },
+        deleteMultipleFiles({}, payload) {
+            return http.delete("attachments", payload);
         },
         getCommentList({}, payload) {
             return http.get("comments/" + payload.boardId, {params: payload});
@@ -49,6 +46,9 @@ export default {
         },
         updateComment({}, payload) {
             return http.put("comments", payload);
+        },
+        getReplyConfirm({}, payload) {
+            return http.get("comments", {params: payload});
         },
         deleteComment({}, payload) {
             return http.delete("comments", payload);

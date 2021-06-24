@@ -16,7 +16,11 @@ export default {
             return authHttp.post("profiles", payload);
         },
         getMyAccount({}, payload) {
-            return authHttp.get("accounts/me", {params: payload})
+            return authHttp.get("accounts/me", {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('access_token')}`
+                }
+            });
         },
     },
     modules: {}

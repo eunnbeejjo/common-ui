@@ -4,6 +4,7 @@
     <v-row>
       <v-col>
         <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
+        <div id="word-count"></div>
       </v-col>
     </v-row>
     <v-row>
@@ -181,6 +182,8 @@ export default {
             let data = {
               params: {
                 boardId: response.data.boardId,
+                attachmentsIds: '',
+                status: 'I',
               },
               formData
             }

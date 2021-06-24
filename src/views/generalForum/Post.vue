@@ -1,15 +1,5 @@
 <template>
   <v-container class="py-10">
-    <!-- v-row>
-      게시글 아이디(seq)
-      내용
-      첨부파일
-      댓글(댓글의 댓글)
-
-      수정
-
-      댓글 - 작성자, 상세내용
-    </v-row -->
     <v-row>
       <v-col>
         <h2>{{ postInfo.title }}</h2>
@@ -39,9 +29,10 @@
         <p>첨부파일</p>
       </v-col>
       <v-col>
+<!--        Math.round(filename1.size/100)/10-->
         <a v-for="(i, index) in postInfo.attachments" :key="index"
-           :href="postInfo.attachments[index].locationPath" style="display: block">
-          {{ postInfo.attachments[index].attachmentsName }}</a>
+           :href="i.locationPath" style="display: block">
+          {{ i.attachmentsName }} ({{ Math.round(i.size/100)/10 }} kB)</a>
       </v-col>
     </v-row>
 
@@ -51,7 +42,7 @@
       </v-col>
     </v-row>
 <v-divider v-if="commentFlag" class="mt-10 mb-3" />
-<!--    댓글 리스트2 (depth) -->
+<!--    댓글 리스트 -->
     <v-row v-if="commentFlag">
       <v-col>
         <ul class="px-10">
@@ -68,13 +59,13 @@
 <!--              댓글 정보 -->
               <h4>{{ item.userId }}</h4>
               <p class="mb-1">{{ item.contents }}</p>
-              <p class="commentLightFont mr-3" style="float: left">{{ item.updateAt }}</p>
-              <p class="commentLightFont mr-3" style="float: left">{{ item.commentGroup }}</p>
-              <p class="commentLightFont mr-3" style="float: left">{{ item.commentOrder }}</p>
-              <p class="commentLightFont mr-3" style="float: left">{{ item.commentLayer }}</p>
-              <p class="commentLightFont" style="cursor: pointer; margin-right: 10px; float: left" @click="addReply(index)">답글달기</p>
-              <p v-if="isWriter" class="commentLightFont" style="cursor: pointer; margin-right: 10px; float: left" @click="deleteComment(item)">삭제</p>
-              <p v-if="isWriter" class="commentLightFont" style="cursor: pointer;" @click="commentUpdate(item, index)">수정</p>
+              <p class="commentLightFont mr-3" style="display: inline-block">{{ item.updateAt }}</p>
+<!--              <p class="commentLightFont mr-3" style="float: left">{{ item.commentGroup }}</p>-->
+<!--              <p class="commentLightFont mr-3" style="float: left">{{ item.commentOrder }}</p>-->
+<!--              <p class="commentLightFont mr-3" style="float: left">{{ item.commentLayer }}</p>-->
+              <p class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="addReply(index)">답글달기</p>
+              <p v-if="item.userId == $route.params.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="deleteComment(item)">삭제</p>
+              <p v-if="item.userId == $route.params.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="commentUpdate(item, index)">수정</p>
 <!--              댓글 작성 -->
               <v-expand-transition>
 <!--                댓글에 대한 답글 -->
@@ -195,19 +186,23 @@ export default {
     }
   },
   mounted() {
-    this.getBoardDetail();
     this.getCommentList();
+    this.getBoardDetail();
   },
   methods: {
     addReply(value) {
       this.replyOpen = value;
+    },
+    isWriterComment(value) {
+      if(this.commentList[value].userId == this.$route.params.id) {
+        return true;
+      }
     },
     getBoardDetail() {
       this.$store.dispatch("boardStore/getBoardDetail", {
         boardId: this.$route.query.boardId,
         userId: 1,
       }).then(response => {
-        console.log(response, 'response');
         this.postInfo = response.data;
         // 댓글 기능 사용 여부
         if(this.postInfo.commentFlag === 'N') {
@@ -250,7 +245,7 @@ export default {
       } else if(this.comment !== '') {
         this.$store.dispatch("boardStore/createComment", {
           boardId: this.$route.query.boardId,
-          userId: 1,
+          userId: this.$route.params.id,
           contents: this.comment,
         }).then(response => {
           this.getCommentList();
@@ -261,7 +256,7 @@ export default {
     createReply(value) {
       this.$store.dispatch("boardStore/createReply", {
         boardId: this.$route.query.boardId,
-        userId: 1,
+        userId: this.$route.params.id,
         contents: this.reply,
         commentGroup: value.commentGroup,
         commentOrder: value.commentOrder,
@@ -276,7 +271,7 @@ export default {
       this.$store.dispatch("boardStore/updateComment", {
         commentId: value.commentId,
         boardId: this.$route.query.boardId,
-        userId: 1,
+        userId: this.$route.params.id,
         contents: this.reply,
       }).then(response => {
         this.getCommentList();
@@ -298,12 +293,41 @@ export default {
         data: {
           commentId: value.commentId,
           boardId: this.$route.query.boardId,
-          userId: 1
+          userId: this.$route.params.id,
+          commentGroup: value.commentGroup,
+          commentOrder: value.commentOrder,
+          commentLayer: value.commentLayer
         }
       }).then(response => {
-        console.log(response, 'delete comment')
         alert('댓글 삭제 완료')
         this.getCommentList();
+      }).catch(error => {
+        console.log('error', error);
+        alert('댓글을 삭제할 수 없습니다.')
+      })
+    },
+    getReplyConfirm(value) {
+      this.$store.dispatch("boardStore/getReplyConfirm", {
+        boardId: this.$route.query.boardId,
+        commentGroup: value.commentGroup,
+        commentOrder: value.commentOrder,
+        commentLayer: value.commentLayer,
+      }).then(response => {
+        if(response.data === false) {
+          // this.deleteComment(value);
+          this.$store.dispatch("boardStore/deleteComment", {
+            data: {
+              commentId: value.commentId,
+              boardId: this.$route.query.boardId,
+              userId: this.$route.params.id
+            }
+          }).then(response => {
+            alert('댓글 삭제 완료')
+            this.getCommentList();
+          })
+        } else {
+          alert('답글이 달린 댓글/답글은 삭제 할 수 없습니다.');
+        }
       })
     },
   },

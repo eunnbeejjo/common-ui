@@ -2,7 +2,8 @@ import axios from "axios";
 import {eventBus} from "@/utils/eventbus";
 
 const instance = axios.create({
-    baseURL: process.env.VUE_APP_URI,
+    // baseURL: process.env.VUE_APP_URI,
+    baseURL: 'http://3.34.98.105:10723/',
     headers: {
         "Accept" : "*/*",
         // "Content-Type" : "application/json",

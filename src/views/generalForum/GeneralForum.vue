@@ -10,8 +10,8 @@
             <v-text-field dense hide-details placeholder="검색어 입력" v-model="searchWord" style="width: 200px; float: left"></v-text-field>
           </v-col>
           <v-col>
-            <v-combobox v-model="cateSelect" :items="cateGroup" placeholder="카테고리(최대 3개)" multiple
-                        dense hide-details class="mr-2">
+            <v-combobox v-model="cateSelect" :items="cateSelectTest" placeholder="카테고리(최대 3개)" multiple
+                        dense hide-details class="mr-2" @change="cateSelectAll">
               <template v-slot:selection="{attrs, item, parent, selected}">
                 <v-chip v-if="item === Object(item)" v-bind="attrs" :input-value="selected" small>
                   <span>{{item.text}}</span>
@@ -75,7 +75,8 @@ export default {
       pageCount: 0,
       itemsPerPage: 10,
       pageGroup: [5, 10, 15, 20],
-      cateSelect: [{text: "전체", value: 1}],
+      cateSelect: [{text: '전체', value: 1}],
+      cateSelectTest: [],
       cateSelectedValue: '1',
       selectedSearch: 'all',
       search: [
@@ -102,35 +103,35 @@ export default {
     this.getCategoryList();
     this.getBoardList();
   },
-  watch: {
-    cateSelect (val) {
-      console.log(val, 'value')
-      if(val.length > 3) {
-        this.$nextTick(() => this.cateSelect.pop());
-        alert('카테고리는 3개까지 검색 가능합니다!');
-      }
-      /*console.log(val.length);
-      let isAll = 0;
-      for(let a=0; a<val.length; a++) {
-        if(val[a].value === 1) {
-          isAll = 1;
-        } else {
-          isAll = 0;
-        }
-      }
-      if(isAll !== 0) {
-        console.log('1 포함')
-        this.cateSelect = this.cateGroup;
-      } else if(isAll === 0) {
-        console.log('1 없음')
-        this.cateSelect = [];
-        // this.cateSelect = val;
-      }
-      console.log(isAll, 'isAll');*/
-      this.cateSelectedValue = this.cateSelect.map(value => value.value).join();
-    }
-  },
   methods: {
+    cateSelectAll (val) {
+      // 뭐라도 선택했을 때
+      if(val.length !== 0) {
+        console.log(val.length, 'length');
+        if(val.length > 3) {
+          this.$nextTick(() => val.pop());
+          this.cateSelectTest = this.cateGroup;
+          alert('카테고리는 3개까지 검색 가능합니다!');
+        }
+        // 선택되어있는 Val 배열 전체 돌면서
+        for (let a = 0; a < val.length; a++) {
+          // value 값이 1인 객체가 있는 경우 (전체)
+          if (val[a].value === 1) {
+            // this.cateSelectTest = [];
+            let isAll = val.find((e) => e.value === 1);
+            this.cateSelectTest = [];
+            this.cateSelectTest.push(isAll);
+            this.cateSelect = this.cateSelectTest
+          } else {
+            this.cateSelectTest = this.cateGroup;
+          }
+        }
+      //  아무것도 선택 안했을 때
+      } else {
+        this.cateSelectTest = this.cateGroup;
+      }
+      this.cateSelectedValue = this.cateSelect.map(value => value.value).join();
+    },
     resizeTableRow() {
 
       let tables = document.getElementsByTagName('table');
@@ -254,6 +255,7 @@ export default {
     getCategoryList() {
       this.$store.dispatch("boardStore/getCategoryList", {
       }).then(response => {
+        console.log(response, 'get category list');
         this.cateGroup = response.data.list;
         this.cateGroup = this.cateGroup.map(function (obj) {
           obj['text'] = obj['categoryName'];
@@ -263,6 +265,7 @@ export default {
           return obj;
         })
         // console.log(this.cateGroup, 'cate group')
+        this.cateSelectTest[0] = this.cateGroup[0];
         for(let a=0; a<this.cateGroup.length; a++) {
           if(this.cateGroup[a].value === 1) {
             console.log('1 포함');

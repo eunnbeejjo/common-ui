@@ -75,7 +75,7 @@
             <v-col><p style="margin-top: 16px; padding-top: 4px;">주소</p></v-col>
             <v-col>
               <v-row>
-                <v-col><v-text-field readonly hide-details style="width: 150px;" v-model="address.zipCode"></v-text-field></v-col>
+                <v-col><v-text-field readonly hide-details style="width: 150px;" v-model="address.zipCode" @click="openPostcodeApi = true"></v-text-field></v-col>
                 <v-col>
                   <v-dialog v-model="openPostcodeApi">
                     <template v-slot:activator="{ on, attrs }">

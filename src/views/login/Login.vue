@@ -27,7 +27,7 @@ export default {
   name: "Login",
   data() {
     return {
-      email: "test5@test.com",
+      email: "eunnbee@test.com",
       password: "qwer1234!",
     }
   },
@@ -45,10 +45,12 @@ export default {
               // access_token 이라는 변수에 토큰 값 저장(localStorage 에 저장)
               localStorage.setItem('access_token', response.data.access_token);
               // http.defaults.baseURL = process.env.VUE_APP_API_URI;
+
               // http 를 임포트 해서 헤더에 Authorization 에 위에서 불러온 access_token 값 추가
-              authHttp.defaults.headers.common["Authorization"] = localStorage.getItem("access_token");
+              // let access_token = localStorage.getItem("access_token");
+              // authHttp.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
               alert('로그인 성공');
-              this.$router.push('/general-forum');
+              this.$router.push('/my-account');
             }
           })
           .catch(error => {
