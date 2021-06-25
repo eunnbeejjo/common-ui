@@ -3,9 +3,8 @@
     <v-text-field placeholder="제목 입력해라" v-model="title" maxlength="30"></v-text-field>
     <v-row>
       <v-col>
-        <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
-        <div id="word-count"></div>
-        <v-btn @click="textCount">text count</v-btn>
+        <ckeditor v-model="contents" :editor="editor" @ready="onReady" id="editBox" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
+        <p id="textCount" style="font-size: 13px; color: #AAAAAA; text-align: right">{{ textByteCount }} / 50,000 Byte</p>
       </v-col>
     </v-row>
     <v-row>
@@ -107,19 +106,34 @@ export default {
       }
       this.cateSelectedValue = this.cateSelect.map(value => value.value);
     },
+    textByteCount(value) {
+      if(value>50000) {
+        // alert('입력 가능한 크기를 초과했습니다.');
+        document.getElementById('textCount').style.color="#FF1744";
+        document.getElementById('editBox').style.borderColor="#FF1744";
+      } else {
+        document.getElementById('textCount').style.color="#AAAAAA";
+        document.getElementById('editBox').style.borderColor="#ccc";
+      }
+    }
   },
   mounted() {
     this.getCategoryList();
   },
+  computed: {
+    textByteCount() {
+      return this.contents
+          .split('')
+          .map(s => s.charCodeAt(0))
+          .reduce((prev, c) => (prev + ((c === 10) ? 2 : ((c >> 7) ? 3 : 1))), 0);
+      // 한글이 2byte 로 계산되어야 할 경우 이렇게 사용!
+      /*let size = this.contents
+          .split('')
+          .map(s => s.charCodeAt(0))
+          .reduce((prev, c) => (prev + ((c === 10) ? 2 : ((c>>7) ? 2 : 1))), 0);*/
+    }
+  },
   methods: {
-    textCount () {
-      let count = this.contents;
-      let str = count.toString();
-      let redex = /\s/ig;
-      let findTextLength = str.replace(redex, '').length - 7;
-
-      console.log(findTextLength, 'text length');
-    },
     onReady( editor ) {
       // Insert the toolbar before the editable area.
       editor.ui.getEditableElement().parentElement.insertBefore(
@@ -165,6 +179,8 @@ export default {
         alert('제목을 입력하세요');
       } else if(this.contents === '') {
         alert('내용을 입력하세요');
+      } else if(this.textByteCount > 50000) {
+        alert('입력 가능한 내용 범위를 초과했습니다!');
       } else if(this.cateSelectedValue === '' || this.cateSelectedValue.length === 0) {
         alert('카테고리를 최소 1개 선택해주세요')
       } else if(this.pwActiveFlag === 'Y' && this.password === '') {

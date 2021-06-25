@@ -3,7 +3,8 @@
     <v-text-field v-model="title" placeholder="제목 입력해라" maxlength="30"></v-text-field>
     <v-row>
       <v-col>
-        <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc; border-top: none;"></ckeditor>
+        <ckeditor v-model="contents" :editor="editor" @ready="onReady" id="editBox" style="height: 500px; border: 1px solid #ccc; border-top: none;"></ckeditor>
+        <p id="textCount" style="font-size: 13px; color: #AAAAAA; text-align: right">{{ textByteCount }} / 50,000 Byte</p>
       </v-col>
     </v-row>
     <v-row>
@@ -120,10 +121,27 @@ export default {
     cateSelect (val) {
       this.cateSelectedValue = this.cateSelect.map(value => value.value);
     },
+    textByteCount(value) {
+      if(value>50000) {
+        document.getElementById('textCount').style.color="#FF1744";
+        document.getElementById('editBox').style.borderColor="#FF1744";
+      } else {
+        document.getElementById('textCount').style.color="#AAAAAA";
+        document.getElementById('editBox').style.borderColor="#ccc";
+      }
+    },
   },
   mounted() {
     this.getBoardDetail();
     this.getCategoryList();
+  },
+  computed: {
+    textByteCount() {
+      return this.contents
+          .split('')
+          .map(s => s.charCodeAt(0))
+          .reduce((prev, c) => (prev + ((c === 10) ? 2 : ((c >> 7) ? 3 : 1))), 0);
+    },
   },
   methods: {
     isNull(val) {
