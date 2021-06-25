@@ -5,6 +5,7 @@
       <v-col>
         <ckeditor v-model="contents" :editor="editor" @ready="onReady" style="height: 500px; border: 1px solid #ccc;"></ckeditor>
         <div id="word-count"></div>
+        <v-btn @click="textCount">text count</v-btn>
       </v-col>
     </v-row>
     <v-row>
@@ -111,6 +112,14 @@ export default {
     this.getCategoryList();
   },
   methods: {
+    textCount () {
+      let count = this.contents;
+      let str = count.toString();
+      let redex = /\s/ig;
+      let findTextLength = str.replace(redex, '').length - 7;
+
+      console.log(findTextLength, 'text length');
+    },
     onReady( editor ) {
       // Insert the toolbar before the editable area.
       editor.ui.getEditableElement().parentElement.insertBefore(

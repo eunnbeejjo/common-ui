@@ -306,13 +306,13 @@ export default {
       ],
 
 
-      email: "test5@test.com",
-      password: "qwer1234!",
-      passwordConfirm: 'qwer1234!',
-      name: "tester4",
-      nickName: "test nickName4",
-      birth: "2000-01-01",
-      phone: "01012345678",
+      email: "",
+      password: "",
+      passwordConfirm: '',
+      name: "",
+      nickName: "",
+      birth: "",
+      phone: "",
       gender: "Male",
       userType: "Company",
       role: "USER",
@@ -329,31 +329,6 @@ export default {
         ]
       },
       profileId: null,
-
-      userInfo: {
-        "email": "test5@test.com",
-        "password": "qwer1234!",
-        "name": "tester4",
-        "nickName": "test nickName4",
-        "birth": "2000-01-01",
-        "phone": "01012345678",
-        "gender": "Male",
-        "userType": "Company",
-        "role": "USER",
-        "loginType": "Email",
-        "address": {
-          "address": "메인 주소",
-          "subAddress": "서브 주소",
-          "zipCode": "00000",
-          "baseAddress": true
-        },
-        "policies": {
-          "policyAgreements": [
-            {"policyId": 1, "agreement": true},
-          ]
-        },
-        "profileId": 2
-      }
     }
   },
   methods: {
