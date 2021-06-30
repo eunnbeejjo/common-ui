@@ -4,6 +4,9 @@
     <v-col cols="12">
       <v-card class="pa-5" elevation="0">
         <v-card-title class="text-h3 mb-5">게시판</v-card-title>
+        <p style="float: left">유저 아이디</p>
+        <v-text-field v-model="userId" style="width: 100px;"></v-text-field>
+        <v-btn @click="getUserId(userId)">확인</v-btn>
         <v-row>
           <v-col cols="3">
             <v-select v-model="selectedSearch" :items="search" item-text="text" item-value="value" dense hide-details style="width: 100px; float: left" class="mr-2"></v-select>
@@ -41,7 +44,7 @@
             </v-data-table>
             </v-fade-transition>
             <v-card-actions v-show="!SKloading" class="justify-center px-10">
-              <v-pagination v-model="page" :length="pageCount"/>
+              <v-pagination v-model="page" :length="pageCount" :total-visible="pageVisible"/>
               <v-select :value="itemsPerPage" label="게시글 표시 갯수" :items="pageGroup" @input="itemsPerPage = parseInt($event, 10)" hide-details></v-select>
             </v-card-actions>
           </v-col>
@@ -70,9 +73,11 @@ export default {
   },
   data() {
     return {
+      userId: 1,
       SKloading: false,
       page: 1,
-      pageCount: 0,
+      pageCount: 5,
+      pageVisible: 7,
       itemsPerPage: 10,
       pageGroup: [5, 10, 15, 20],
       cateSelect: [{text: '전체', value: 1}],
@@ -238,14 +243,14 @@ export default {
       let selectedPost = this.boardList[tr];
       this.$store.dispatch("boardStore/getBoardStatus", {
         boardId: selectedPost.boardId,
-        userId: 1,
+        userId: this.$store.state.boardStore.id,
       }).then(response => {
         let status = response.data.status;
         if(status === "me") {
-          router.push({ path: '/post/'+1, query: { boardId: selectedPost.boardId } })
+          router.push({ path: '/post/'+this.userId, query: { boardId: selectedPost.boardId } })
           // router.push({ path: '/post/'+selectedPost.userId, query: { boardId: selectedPost.boardId } })
         } else if(status === "other") {
-          router.push({ path: '/post/'+1, query: { boardId: selectedPost.boardId } })
+          router.push({ path: '/post/'+this.userId, query: { boardId: selectedPost.boardId } })
         } else {
           router.push({ path: '/post-pw', query: { boardId: selectedPost.boardId } })
         }
@@ -273,10 +278,14 @@ export default {
         }
       })
     },
+    getUserId() {
+      this.$store.commit('boardStore/getUserId', this.userId)
+      this.getBoardList();
+    },
     // 초기 게시글 List 조회
     getBoardList() {
       this.$store.dispatch("boardStore/getBoardList", {
-        userId: 1,
+        userId: this.$store.state.boardStore.id,
       }).then(response => {
         console.log(response, 'board list');
         this.boardList = response.data.list;
@@ -293,7 +302,7 @@ export default {
     },
     getSearchBoardList() {
       this.$store.dispatch("boardStore/getSearchBoardList", {
-        userId: 1,
+        userId: this.$store.state.boardStore.id,
         // 검색조건
         searchStatus: this.selectedSearch,
         // 검색어

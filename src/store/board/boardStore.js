@@ -2,8 +2,14 @@ import http from "@/api/http";
 
 export default {
     namespaced: true,
-    state: {},
-    mutations: {},
+    state: {
+        id: 1
+    },
+    mutations: {
+        getUserId(state, value) {
+            state.id = value
+        }
+    },
     actions: {
         getBoardList({}, payload) {
             return http.get("boards/" + payload.userId);

@@ -190,10 +190,10 @@ export default {
     getBoardDetail() {
       this.$store.dispatch("boardStore/getBoardDetail", {
         boardId: this.$route.query.boardId,
-        userId: 1,
+        userId: this.$store.state.boardStore.id,
       }).then(response => {
-        console.log(response, 'get board detail');
         let originDetail = response.data;
+        console.log(originDetail, 'origin');
 
         for(let i in originDetail.category) {
           this.cateSelect[i] = {
@@ -221,7 +221,6 @@ export default {
     onChangeFile(e) {
       console.log(e.target.files);
       const fileName = e.target.files[0].name;
-      console.log(fileName, 'file name');
       this.fileName = fileName;
     },
     selectFile1(file) {
@@ -240,11 +239,11 @@ export default {
         alert('내용을 입력하세요');
       } else if(this.cateSelectedValue === '' || this.cateSelectedValue.length === 0) {
         alert('카테고리를 최소 1개 선택해주세요')
-      } else if(this.pwActiveFlag === 'Y' && this.password === '') {
+      } else if(this.pwActiveFlag === 'Y' && ( this.password === '' || this.password === undefined || this.password === null)) {
         alert('사용할 비밀번호를 입력해주세요');
       } else {
         this.$store.dispatch("boardStore/updateBoard", {
-          userId: 1,
+          userId: this.$store.state.boardStore.id,
           boardId: this.$route.query.boardId,
           title: this.title,
           contents: this.contents,
@@ -255,7 +254,7 @@ export default {
           categoryId: this.cateSelectedValue,
           commentFlag: this.commentFlag,
         }).then(response => {
-          console.log(response, 'update response');
+          console.log(response, 'update board');
           if(response.data.attachmentsFlag === "Y") {
             // upload multiple files
             let formData = new FormData();
@@ -290,14 +289,14 @@ export default {
             })
           }
           alert('저장되었습니다!');
-          router.push({ path: '/post/'+1, query: { boardId: response.data.boardId } })
+          router.push({ path: '/post/'+this.$store.state.boardStore.id, query: { boardId: response.data.boardId } })
         }).catch(error => {
           console.log(error, 'error')
         })
       }
     },
     cancelUpdate() {
-      router.push({path: '/post/'+1, query: { boardId: this.$route.query.boardId }});
+      router.push({path: '/post/'+this.$store.state.boardStore.id, query: { boardId: this.$route.query.boardId }});
     },
   },
 }

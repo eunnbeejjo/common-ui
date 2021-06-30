@@ -1,6 +1,8 @@
 <template>
   <v-app>
-    <v-app-bar app clipped-left dense color="green lighten-3"></v-app-bar>
+    <v-app-bar app clipped-left dense color="green lighten-3">
+      현재 USER ID : {{ this.$store.state.boardStore.id }}
+    </v-app-bar>
     <v-navigation-drawer app clipped>
       <v-list>
         <v-list-item-group v-model="selectedMenu">

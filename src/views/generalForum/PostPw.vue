@@ -27,7 +27,7 @@ export default {
       }).then(response => {
         if(response.data === true) {
           // alert('비밀번호 맞음');
-          router.push({ path: '/post/'+1, query: { boardId: this.$route.query.boardId } })
+          router.push({ path: '/post/'+this.$store.state.boardStore.id, query: { boardId: this.$route.query.boardId } })
         } else {
           alert('비밀번호 오류! 다시 입력');
           this.password = null

@@ -64,8 +64,8 @@
 <!--              <p class="commentLightFont mr-3" style="float: left">{{ item.commentOrder }}</p>-->
 <!--              <p class="commentLightFont mr-3" style="float: left">{{ item.commentLayer }}</p>-->
               <p class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="addReply(index)">답글달기</p>
-              <p v-if="item.userId == $route.params.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="deleteComment(item)">삭제</p>
-              <p v-if="item.userId == $route.params.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="commentUpdate(item, index)">수정</p>
+              <p v-if="item.userId == $store.state.boardStore.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="deleteComment(item)">삭제</p>
+              <p v-if="item.userId == $store.state.boardStore.id" class="commentLightFont" style="cursor: pointer; margin-right: 10px; display: inline-block" @click="commentUpdate(item, index)">수정</p>
 <!--              댓글 작성 -->
               <v-expand-transition>
 <!--                댓글에 대한 답글 -->
@@ -104,7 +104,7 @@
       <v-col>
         <v-card class="px-5 py-2" elevation="0" outlined>
 <!--          댓글 작성자 ID -->
-          <h4>사용자 아이디 : {{ this.$route.params.id }}</h4>
+          <h4>사용자 아이디 : {{ this.$store.state.boardStore.id }}</h4>
           <v-textarea solo flat counter="30" v-model="comment" :rules="[rules.required, rules.counter]" maxlength="250" placeholder="댓글을 남겨보세요" rows="2" />
           <v-btn @click="createComment">등록</v-btn>
         </v-card>
@@ -193,16 +193,12 @@ export default {
     addReply(value) {
       this.replyOpen = value;
     },
-    isWriterComment(value) {
-      if(this.commentList[value].userId == this.$route.params.id) {
-        return true;
-      }
-    },
     getBoardDetail() {
       this.$store.dispatch("boardStore/getBoardDetail", {
         boardId: this.$route.query.boardId,
-        userId: 1,
+        userId: this.$store.state.boardStore.id,
       }).then(response => {
+        console.log(response, 'get board detail');
         this.postInfo = response.data;
         // 댓글 기능 사용 여부
         if(this.postInfo.commentFlag === 'N') {
@@ -211,7 +207,7 @@ export default {
           this.commentFlag = true;
         }
         // 하나는 문자열, 하나는 숫자라서 !== 아닌 != 으로 했음, !== 쓰고싶으면 형변환해야함
-        if(this.$route.params.id != this.postInfo.userId) {
+        if(this.$store.state.boardStore.id != this.postInfo.userId) {
           this.isWriter = false;
         } else {
           this.isWriter = true;
@@ -219,13 +215,13 @@ export default {
       })
     },
     moveToUpdate() {
-      router.push({ path: '/update-post/'+1, query: { boardId: this.$route.query.boardId } });
+      router.push({ path: '/update-post/'+this.$store.state.boardStore.id, query: { boardId: this.$route.query.boardId } });
     },
     deleteBoard() {
       this.$store.dispatch("boardStore/deleteBoard", {
         data: {
           boardId: this.$route.query.boardId,
-          userId: 1
+          userId: this.$store.state.boardStore.id
         }
       }).then(response => {
         alert('게시물 삭제 완료!');
@@ -245,7 +241,7 @@ export default {
       } else if(this.comment !== '') {
         this.$store.dispatch("boardStore/createComment", {
           boardId: this.$route.query.boardId,
-          userId: this.$route.params.id,
+          userId: this.$store.state.boardStore.id,
           contents: this.comment,
         }).then(response => {
           this.getCommentList();
@@ -256,7 +252,7 @@ export default {
     createReply(value) {
       this.$store.dispatch("boardStore/createReply", {
         boardId: this.$route.query.boardId,
-        userId: this.$route.params.id,
+        userId: this.$store.state.boardStore.id,
         contents: this.reply,
         commentGroup: value.commentGroup,
         commentOrder: value.commentOrder,
@@ -271,7 +267,7 @@ export default {
       this.$store.dispatch("boardStore/updateComment", {
         commentId: value.commentId,
         boardId: this.$route.query.boardId,
-        userId: this.$route.params.id,
+        userId: this.$store.state.boardStore.id,
         contents: this.reply,
       }).then(response => {
         this.getCommentList();
@@ -293,7 +289,7 @@ export default {
         data: {
           commentId: value.commentId,
           boardId: this.$route.query.boardId,
-          userId: this.$route.params.id,
+          userId: this.$store.state.boardStore.id,
           commentGroup: value.commentGroup,
           commentOrder: value.commentOrder,
           commentLayer: value.commentLayer
@@ -319,7 +315,7 @@ export default {
             data: {
               commentId: value.commentId,
               boardId: this.$route.query.boardId,
-              userId: this.$route.params.id
+              userId: this.$store.state.boardStore.id
             }
           }).then(response => {
             alert('댓글 삭제 완료')

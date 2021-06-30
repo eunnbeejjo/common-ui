@@ -162,7 +162,6 @@ export default {
     onChangeFile(e) {
       console.log(e.target.files);
       const fileName = e.target.files[0].name;
-      console.log(fileName, 'file name');
       this.fileName = fileName;
     },
     selectFile1(file) {
@@ -187,7 +186,7 @@ export default {
         alert('사용할 비밀번호를 입력해주세요');
       } else {
         this.$store.dispatch("boardStore/createBoard", {
-          userId: 1,
+          userId: this.$store.state.boardStore.id,
           title: this.title,
           contents: this.contents,
           pwActiveFlag: this.pwActiveFlag,
@@ -197,7 +196,6 @@ export default {
           categoryId: this.cateSelectedValue,
           commentFlag: this.commentFlag,
         }).then(response => {
-          console.log(response, 'create response');
           if(response.data.attachmentsFlag === "Y") {
             // upload multiple files
             let formData = new FormData();
